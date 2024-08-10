@@ -121,75 +121,75 @@ monkey_paw_tasks = {
 
 # Dictionary for tile tasks
 tile_tasks = {
-  1:
-  2:
-  3:
-  4:
-  5:
-  6:
-  7:
-  8:
-  9:
-  10:
-  11:
-  12:
-  13:
-  14:
-  15:
-  16:
-  17:
-  18:
-  19:
-  20:
-  21:
-  22:
-  23:
-  24:
-  25:
-  26:
-  27:
-  28:
-  29:
-  30:
-  31:
-  32:
-  33:
-  34:
-  35:
-  36:
-  37:
-  38:
-  39:
-  40:
-  41:
-  42:
-  43:
-  44:
-  45:
-  46:
-  47:
-  48:
-  49:
-  50:
-  51:
-  52:
-  53:
-  54:
-  55:
-  56:
-  57:
-  58:
-  59:
-  60:
-  61:
-  62:
-  63:
-  64:
-  65:
-  66:
-  67:
-  68:
-  69:
+  1: 'task',
+  2: 'task',
+  3: 'task',
+  4: 'task',
+  5: 'task',
+  6: 'task',
+  7: 'task',
+  8: 'task',
+  9: 'task',
+  10: 'task',
+  11: 'task',
+  12: 'task',
+  13: 'task',
+  14: 'task',
+  15: 'task',
+  16: 'task',
+  17: 'task',
+  18: 'task',
+  19: 'task',
+  20: 'task',
+  21: 'task',
+  22: 'task',
+  23: 'task',
+  24: 'task',
+  25: 'task',
+  26: 'task',
+  27: 'task',
+  28: 'task',
+  29: 'task',
+  30: 'task',
+  31: 'task',
+  32: 'task',
+  33: 'task',
+  34: 'task',
+  35: 'task',
+  36: 'task',
+  37: 'task',
+  38: 'task',
+  39: 'task',
+  40: 'task',
+  41: 'task',
+  42: 'task',
+  43: 'task',
+  44: 'task',
+  45: 'task',
+  46: 'task',
+  47: 'task',
+  48: 'task',
+  49: 'task',
+  50: 'task',
+  51: 'task',
+  52: 'task',
+  53: 'task',
+  54: 'task',
+  55: 'task',
+  56: 'task',
+  57: 'task',
+  58: 'task',
+  59: 'task',
+  60: 'task',
+  61: 'task',
+  62: 'task',
+  63: 'task',
+  64: 'task',
+  65: 'task',
+  66: 'task',
+  67: 'task',
+  68: 'task',
+  69: 'task',
 }
 
 # Tasks for bonus tiles
