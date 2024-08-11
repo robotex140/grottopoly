@@ -4,6 +4,7 @@ import random
 import asyncio
 import os
 import json
+import traceback
 from dotenv import load_dotenv
 from collections import defaultdict, deque
 from datetime import datetime, timedelta
@@ -70,6 +71,7 @@ rolls_count = defaultdict(int)
 tile_completion_times = defaultdict(list)
 tile_start_times = {}
 teams_needing_bonus_choice = defaultdict(lambda: None)
+tiles_revealed = set()
 
 team_gp_bonus = defaultdict(int)
 
@@ -93,6 +95,17 @@ team_roles = {
     'team6': 1251720714050998273,  # Replace with actual role ID for Team 6
     'team7': 1251720752235937802,  # Replace with actual role ID for Team 7
     'team8': 1251720795152060497  # Replace with actual role ID for Team 8
+}
+
+team_symbols = {
+    'team1': '1️⃣',
+    'team2': '2️⃣',
+    'team3': '3️⃣',
+    'team4': '4️⃣',
+    'team5': '5️⃣',
+    'team6': '6️⃣',
+    'team7': '7️⃣',
+    'team8': '8️⃣'
 }
 
 # Tasks for Monkey's Paw
@@ -371,7 +384,8 @@ def save_state():
         "tile_start_times": {k: v.isoformat() for k, v in tile_start_times.items()},
         "teams_needing_bonus_choice": {k: v for k, v in teams_needing_bonus_choice.items()},
         "team_gp_bonus": dict(team_gp_bonus),
-        "team_sabotaged": dict(team_sabotaged)
+        "team_sabotaged": dict(team_sabotaged),
+        "tiles_revealed": list(tiles_revealed)
     }
 
     logging.debug(f"State to be saved: {state}")
@@ -386,6 +400,7 @@ def load_state():
     global team_data, captains, team_positions, completed_tiles, tile_completions, player_completions, team_members
     global team_has_rolled, bonus_tile_completions, team_advantages, bonus_choices, rolls_count, tile_completion_times
     global teams_set, number_of_teams, game_started, tile_start_times, teams_needing_bonus_choice, team_gp_bonus, team_sabotaged
+    global tiles_revealed
 
     try:
         with open("state.json", "r") as f:
@@ -410,6 +425,7 @@ def load_state():
             team_gp_bonus = defaultdict(int, state.get("team_gp_bonus", {}))
             team_sabotaged = defaultdict(lambda: False, state.get("team_sabotaged", {}))
             number_of_teams = len(team_data)
+            tiles_revealed = set(state.get("tiles_revealed"))
             logging.debug("Loaded state from state.json.")
             logging.debug(f"Loaded Bonus Tile Completions: {bonus_tile_completions}")
     except FileNotFoundError:
@@ -417,6 +433,56 @@ def load_state():
     except Exception as e:
         logging.error(f"Error loading state: {e}")
 
+
+def infer_revealed_tiles():
+    revealed_tiles = set().union(team_positions.values())
+    for _, tiles in tile_completions:
+        revealed_tiles.union(tiles)
+    return revealed_tiles
+
+def generate_streak_msg(unrevealed_streak_tiles):
+    response = ""
+    start, end = unrevealed_streak_tiles[0], unrevealed_streak_tiles[-1]
+    if end - start > 0:
+        response += f"Tiles {start}-{end}: ❓unknown tasks❓\n"
+    else:
+        response += f"Tile {start}: ❓unknown task❓\n"
+    unrevealed_streak_tiles.clear()
+    return response
+
+def generate_revealed_tiles_msg(istaylor=False):
+    global tiles_revealed
+    # if there is no data, infer the currently revealed tiles from database
+    if tiles_revealed == set():
+        tiles_revealed = infer_revealed_tiles()
+    response = "**Currently revealed tiles\n\n"
+    _tile = 1
+    unrevealed_streak_tiles = []
+
+    for tile, task in tile_tasks.items():
+        # gather symbols of teams at tile
+        teams = ""
+        for team, position in team_positions:
+            if position == tile:
+                teams += team_symbols[team]
+
+        if istaylor or tile in tiles_revealed:
+            # generate str chunk for streak of unrevealed tiles if not empty
+            if unrevealed_streak_tiles:
+                response += generate_streak_msg(unrevealed_streak_tiles)
+            if tile in hard_stop_tiles:
+                response += f"{teams}🚧Tile {tile}: {task}\n"
+            else:
+                response += f"{teams}Tile {tile}: {task}\n"
+        else:
+            if tile in hard_stop_tiles:
+                # generate str chunk for streak of unrevealed tiles if not empty
+                if unrevealed_streak_tiles:
+                    response += generate_streak_msg(unrevealed_streak_tiles)
+                response += f"{teams}🚧Tile {tile}: {task}\n"
+            else:
+                unrevealed_streak_tiles.append(tile)
+    return response
 
 async def initialize_team_members():
     """Initialize team members based on existing roles in the guild."""
@@ -731,6 +797,8 @@ async def update_team_position(team, roll):
                 break
 
     team_positions[team] = new_position
+    global tiles_revealed
+    tiles_revealed.add(new_position)
     return new_position, hard_stop_message
 
 
@@ -898,17 +966,25 @@ async def complete(ctx, *, input: str):
 @bot.command()
 @category_check()
 @command_cooldown
-async def board(ctx):
+async def board(ctx, *, input:str):
     """Secret command to display all tiles on the board."""
     taylor2ya_id = 472000479476580362
-
-    if ctx.author.id == taylor2ya_id:
-        response = "**All Tiles on the Board**\n\n"
-        for tile, task in tile_tasks.items():
-            response += f"Tile {tile}: {task}\n"
-        await ctx.send(response)
-    else:
-        await ctx.send(f"Hey everyone, @{ctx.author.display_name} just tried to do something very silly!")
+    input = input.strip()
+    try:
+        if ctx.author.id == taylor2ya_id:
+            if input == "spoiler":
+                response = generate_revealed_tiles_msg(istaylor=True)
+            elif input == "":
+                response = generate_revealed_tiles_msg(istaylor=False)
+            else:
+                # keyphrase is to prevent accidentally spoilering board
+                response = "incorrect keyphrase \"{input}\" provided, correct keyphrase is \"spoiler\""
+            await ctx.send(response)
+        else:
+            response = generate_revealed_tiles_msg(istaylor=False)
+            await ctx.send(response)
+    except Exception as e:
+        logging.debug(traceback.format_exc())
 
 
 @bot.command()
@@ -1858,7 +1934,7 @@ async def give(ctx, team: str, tile: int):
 
     team_positions[team] = tile
     team_has_rolled[team] = True  # Mark the team as having rolled to avoid immediate reroll
-
+    tiles_revealed.add(tile)
     # Reset the completion status for the new tile
     if tile in completed_tiles[team]:
         completed_tiles[team].remove(tile)
